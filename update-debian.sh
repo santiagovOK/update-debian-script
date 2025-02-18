@@ -30,6 +30,11 @@ log_message() {
     esac
 }
 
+# Function to send xmessage notification
+send_notification() {
+    xmessage -timeout 1 -center "$1"
+}
+
 # Start of the script
 log_message "Starting the update process."
 echo ""
@@ -41,6 +46,7 @@ if [ $? -eq 0 ]; then
     log_message "Package lists updated successfully."
 else
     log_message "Failed to update package lists."
+    send_notification "Failed to update package lists. Check the log at $LOGFILE for details."
     exit 1
 fi
 
@@ -53,6 +59,7 @@ if [ $? -eq 0 ]; then
     log_message "Installed packages upgraded successfully."
 else
     log_message "Failed to upgrade installed packages."
+    send_notification "Failed to upgrade installed packages. Check the log at $LOGFILE for details."
     exit 1
 fi
 
@@ -65,6 +72,7 @@ if [ $? -eq 0 ]; then
     log_message "Distribution upgraded successfully."
 else
     log_message "Failed to perform distribution upgrade."
+    send_notification "Failed to perform distribution upgrade. Check the log at $LOGFILE for details."
     exit 1
 fi
 
@@ -77,6 +85,7 @@ if [ $? -eq 0 ]; then
     log_message "Updated kernel installed successfully."
 else
     log_message "Failed to install updated kernel."
+    send_notification "Failed to install updated kernel. Check the log at $LOGFILE for details."
     exit 1
 fi
 
@@ -89,6 +98,7 @@ if [ $? -eq 0 ]; then
     log_message "Unnecessary packages removed successfully."
 else
     log_message "Failed to remove unnecessary packages."
+    send_notification "Failed to remove unnecessary packages. Check the log at $LOGFILE for details."
 fi
 
 echo ""
@@ -96,5 +106,5 @@ echo ""
 log_message "Update process completed."
 echo "Update process completed. Check the log at $LOGFILE for details."
 
-# Send notification to Openbox
-xmessage -timeout 1 -center "The Debian system update process has completed."
+# Send notification to Openbox if no errors occurred
+send_notification "The Debian system update process has completed."
