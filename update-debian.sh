@@ -4,7 +4,7 @@
 # This script automates the process of updating the Debian system.
 
 # Define log file for auditing
-LOGFILE="<directory to save $LOGFILE>"
+LOGFILE="/tmp/update-debian.log"
 
 # Color codes
 RED='\033[0;31m'
@@ -95,3 +95,6 @@ echo ""
 
 log_message "Update process completed."
 echo "Update process completed. Check the log at $LOGFILE for details."
+
+# Send notification to Openbox
+xmessage -timeout 1 -center "The Debian system update process has completed."
