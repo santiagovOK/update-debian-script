@@ -65,6 +65,18 @@ fi
 
 echo ""
 
+# Update Flatpak packages
+echo "Updating Flatpak packages..."
+if sudo flatpak update -y &> /tmp/flatpak_update.log; then
+    log_message "Flatpak packages updated successfully."
+else
+    log_message "Failed to update Flatpak packages."
+    send_notification "Failed to update Flatpak packages. Check the log at $LOGFILE for details."
+    exit 1
+fi
+
+echo ""
+
 # Perform distribution upgrade
 echo "Performing distribution upgrade..."
 sudo apt dist-upgrade -y
