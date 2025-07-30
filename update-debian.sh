@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Update Debian Script
 # This script automates the process of updating the Debian system.
 
@@ -49,7 +48,6 @@ else
     send_notification "Failed to update package lists. Check the log at $LOGFILE for details."
     exit 1
 fi
-
 echo ""
 
 # Upgrade installed packages
@@ -62,19 +60,21 @@ else
     send_notification "Failed to upgrade installed packages. Check the log at $LOGFILE for details."
     exit 1
 fi
-
 echo ""
 
-# Update Flatpak packages
-echo "Updating Flatpak packages..."
-if sudo flatpak update -y &> /tmp/flatpak_update.log; then
-    log_message "Flatpak packages updated successfully."
+# Check if there are any Flatpak packages installed
+if flatpak list &> /dev/null; then
+    echo "Updating Flatpak packages..."
+    if sudo flatpak update -y &> /tmp/flatpak_update.log; then
+        log_message "Flatpak packages updated successfully."
+    else
+        log_message "Failed to update Flatpak packages."
+        send_notification "Failed to update Flatpak packages. Check the log at $LOGFILE for details."
+        exit 1
+    fi
 else
-    log_message "Failed to update Flatpak packages."
-    send_notification "Failed to update Flatpak packages. Check the log at $LOGFILE for details."
-    exit 1
+    log_message "No Flatpak packages installed. Skipping Flatpak update."
 fi
-
 echo ""
 
 # Perform distribution upgrade
@@ -87,7 +87,6 @@ else
     send_notification "Failed to perform distribution upgrade. Check the log at $LOGFILE for details."
     exit 1
 fi
-
 echo ""
 
 # Install the updated kernel - Change to 32 bits linux-image if it's required
@@ -100,7 +99,6 @@ else
     send_notification "Failed to install updated kernel. Check the log at $LOGFILE for details."
     exit 1
 fi
-
 echo ""
 
 # Clean up unnecessary packages
@@ -112,7 +110,6 @@ else
     log_message "Failed to remove unnecessary packages."
     send_notification "Failed to remove unnecessary packages. Check the log at $LOGFILE for details."
 fi
-
 echo ""
 
 log_message "Update process completed."
