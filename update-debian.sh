@@ -67,6 +67,54 @@ check_disk_space() {
     return 0
 }
 
+# Function to check for non-Debian packages
+check_non_debian_packages() {
+    log_message "INFO: Checking for non-Debian packages..."
+    if ! command -v apt-forktracer &> /dev/null; then
+        echo -e "${YELLOW}WARNING: apt-forktracer is not installed. Cannot check for non-debian packages.${NC}"
+        echo -e "${BLUE}To install it, run: sudo apt install apt-forktracer${NC}"
+        return 0
+    fi
+
+    non_debian_packages=$(apt-forktracer | grep -v "^/")
+    if [ -n "$non_debian_packages" ]; then
+        log_message "WARNING: Non-Debian packages detected"
+        echo -e "${YELLOW}Non-Debian packages detected. It is recommended to remove or disable them before upgrading:${NC}"
+        echo "$non_debian_packages"
+        return 1
+    fi
+    return 0
+}
+
+# Function to check for obsolete packages
+check_obsolete_packages() {
+    log_message "INFO: Checking for obsolete packages..."
+    if ! command -v apt-show-versions &> /dev/null; then
+        echo -e "${YELLOW}WARNING: apt-show-versions is not installed. Cannot check for obsolete packages.${NC}"
+        echo -e "${BLUE}To install it, run: sudo apt install apt-show-versions${NC}"
+        return 0
+    fi
+
+    obsolete_packages=$(apt-show-versions | grep "No available version in sources")
+    if [ -n "$obsolete_packages" ]; then
+        log_message "WARNING: Obsolete packages detected"
+        echo -e "${YELLOW}Obsolete packages detected. It is recommended to remove them before upgrading:${NC}"
+        echo "$obsolete_packages"
+    fi
+    return 0
+}
+
+# Function to check for recommended packages
+check_recommended_packages() {
+    log_message "INFO: Checking for recommended packages..."
+    for pkg in apt-listbugs apt-listchanges; do
+        if ! command -v $pkg &> /dev/null; then
+            echo -e "${YELLOW}WARNING: $pkg is not installed. It is highly recommended to install it.${NC}"
+            echo -e "${BLUE}To install it, run: sudo apt install $pkg${NC}"
+        fi
+    done
+}
+
 # Function to verify system state
 verify_system_state() {
     log_message "INFO: Verifying system state..."
@@ -89,6 +137,22 @@ verify_system_state() {
         echo -e "${BLUE}Consider removing holds before upgrading${NC}"
     fi
     
+    # Check for non-debian packages
+    if ! check_non_debian_packages; then
+        echo -e "${YELLOW}Continue anyway? (y/N): ${NC}"
+        read -r continue_choice
+        if [[ ! "$continue_choice" =~ ^[Yy]$ ]]; then
+            log_message "Upgrade cancelled due to non-debian packages"
+            exit 1
+        fi
+    fi
+
+    # Check for obsolete packages
+    check_obsolete_packages
+
+    # Check for recommended packages
+    check_recommended_packages
+
     # Check current Debian version
     current_version=$(cat /etc/debian_version 2>/dev/null || echo "unknown")
     log_message "Current Debian version: $current_version"
@@ -207,8 +271,7 @@ update_sources_for_upgrade() {
             if [ -f "$sources_file" ]; then
                 sudo cp "$sources_file" "$sources_file.backup-$(date +%Y%m%d)"
                 # Update suites in deb822 format
-                sudo sed -i "s/bookworm/$new_codename/g" "$sources_file"
-                sudo sed -i "s/bullseye/$new_codename/g" "$sources_file"
+                sudo sed -i -E "s/^(Suites:.*)(bookworm|bullseye)(.*)$/\1$new_codename\3/" "$sources_file"
                 sources_updated=true
             fi
         done
@@ -216,8 +279,7 @@ update_sources_for_upgrade() {
     
     # Update traditional sources.list format
     if [ -f /etc/apt/sources.list ]; then
-        sudo sed -i "s/bookworm/$new_codename/g" /etc/apt/sources.list
-        sudo sed -i "s/bullseye/$new_codename/g" /etc/apt/sources.list
+        sudo sed -i -E "s/^(deb.*)(bookworm|bullseye)(.*)$/\1$new_codename\3/" /etc/apt/sources.list
         sources_updated=true
     fi
     
@@ -225,8 +287,7 @@ update_sources_for_upgrade() {
     for list_file in /etc/apt/sources.list.d/*.list; do
         if [ -f "$list_file" ]; then
             sudo cp "$list_file" "$list_file.backup-$(date +%Y%m%d)"
-            sudo sed -i "s/bookworm/$new_codename/g" "$list_file"
-            sudo sed -i "s/bullseye/$new_codename/g" "$list_file"
+            sudo sed -i -E "s/^(deb.*)(bookworm|bullseye)(.*)$/\1$new_codename\3/" "$list_file"
             sources_updated=true
         fi
     done
